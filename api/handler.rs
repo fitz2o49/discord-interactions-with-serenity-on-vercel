@@ -19,7 +19,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
 fn handle_command(interaction: CommandInteraction) -> CreateInteractionResponse {
     CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().content(format!(
-        "Hello from interactions webhook HTTP server! <@{}>",
+        "*Hello* from interactions webhook HTTP server! <@{}>\nThank you!",
         interaction.user.id
     )))
 }
@@ -31,22 +31,17 @@ fn handle_request(
 ) -> Result<Response<Body>, Error> {
     let body = request.body();
 
-    let signature = match request.headers().get("X-Signature-Ed25519") {
+    let find_header = |name| match request.headers().get(name) {
         Some(value) => value.to_str().unwrap_or(""),
         None => "",
     };
-       
-    let timestamp = match request.headers().get("X-Signature-Timestamp") {
-        Some(value) => value.to_str().unwrap_or(""),
-        None => "",
-    };
+
+    let signature = find_header("X-Signature-Ed25519");
+    let timestamp = find_header("X-Signature-Timestamp");
 
     eprintln!("signature: {signature}, timestamp: {timestamp}");
 
-    if verifier
-        .verify(signature, timestamp, &body)
-        .is_err()
-    {
+    if verifier.verify(signature, timestamp, &body).is_err() {
         eprintln!("Failed to verifier");
         return Ok(Response::builder()
             .status(StatusCode::UNAUTHORIZED)
@@ -62,7 +57,7 @@ fn handle_request(
         Interaction::Command(interaction) => handle_command(interaction),
         _ => return Ok(Response::builder().body(().into())?),
     };
-   // eprintln!("{:?}", response);
+    // eprintln!("{:?}", response);
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
